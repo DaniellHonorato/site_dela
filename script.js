@@ -398,7 +398,7 @@ function initCarousel() {
     thumbStrip.appendChild(thumb);
   });
 
-  function goTo(idx) {
+  function goTo(idx, shouldScrollThumb = true) {
     current = (idx + photos.length) % photos.length;
     track.style.transform = `translateX(-${current * 100}%)`;
 
@@ -417,10 +417,12 @@ function initCarousel() {
     nextBtn.disabled = false;
 
     /* Scroll thumb into view */
-    thumbStrip.querySelectorAll('.thumb')[current]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if (shouldScrollThumb) {
+      thumbStrip.querySelectorAll('.thumb')[current]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
   }
 
-  goTo(0);
+  goTo(0, false);
 
   /* Navegação — somente manual, sem auto-play */
   prevBtn.addEventListener('click', () => goTo(current - 1));

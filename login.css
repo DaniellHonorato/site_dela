@@ -1,0 +1,288 @@
+/* ================================================================
+   LOGIN.CSS — Página de acesso especial
+   ================================================================ */
+
+/* ─── TOKENS ──────────────────────────────────────────────────── */
+:root {
+  --bg:           #12100e;
+  --bg-card:      #1e1a17;
+  --bg-input:     #2a2520;
+  --border:       #3a3028;
+  --border-light: #4a4035;
+  --accent:       #d4956a;
+  --accent-light: #e8b48a;
+  --green:        #5a9e78;
+  --green-light:  #7cc49a;
+  --text-primary: #f0ead8;
+  --text-sec:     #c8bca8;
+  --text-muted:   #8a7d6a;
+  --font-serif:   'Playfair Display', Georgia, serif;
+  --font-sans:    'Lato', system-ui, sans-serif;
+  --font-hand:    'Caveat', cursive;
+  --shadow-lg:    0 12px 40px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.3);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:     cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── RESET ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Textura sutil */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999;
+}
+
+/* ─── CANVAS PÉTALAS ──────────────────────────────────────────── */
+#pw-petals {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  width: 100%; height: 100%;
+}
+
+/* ─── CARD DE LOGIN ───────────────────────────────────────────── */
+.login-card {
+  position: relative; z-index: 10;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 28px;
+  padding: 3rem 2.5rem 2.5rem;
+  width: min(440px, calc(100vw - 2rem));
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(212,149,106,.08);
+  text-align: center;
+  animation: cardIn .8s var(--ease-out) both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(32px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: .6rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.login-eyebrow {
+  font-family: var(--font-hand);
+  font-size: .9rem;
+  color: var(--accent);
+  letter-spacing: .08em;
+  margin-bottom: .5rem;
+}
+
+.login-title {
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin-bottom: .5rem;
+}
+
+.login-title em {
+  font-style: italic;
+  color: var(--accent-light);
+}
+
+.login-hint {
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--text-sec);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+/* ─── INPUT AREA ──────────────────────────────────────────────── */
+.input-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.pw-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-light);
+  border-radius: 14px;
+  color: var(--text-primary);
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  padding: .85rem 3rem .85rem 1.1rem;
+  outline: none;
+  transition: border-color .25s, box-shadow .25s;
+}
+
+.pw-input::placeholder { color: var(--text-muted); }
+
+.pw-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212,149,106,.15);
+}
+
+.pw-input.shake {
+  animation: shake .45s var(--ease-spring);
+  border-color: #c0614a;
+}
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}
+
+.pw-toggle {
+  position: absolute; right: .9rem; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  cursor: pointer; font-size: 1.2rem;
+  color: var(--text-muted);
+  transition: color .2s;
+  padding: .2rem;
+}
+
+.pw-toggle:hover { color: var(--accent); }
+
+/* ─── FEEDBACK ────────────────────────────────────────────────── */
+.pw-error {
+  font-family: var(--font-hand);
+  font-size: .95rem;
+  min-height: 1.4em;
+  margin-bottom: .5rem;
+  color: #c0614a;
+  transition: opacity .2s;
+}
+
+.pw-error.success { color: var(--green-light); }
+
+.pw-attempts {
+  font-family: var(--font-sans);
+  font-size: .8rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+  margin-bottom: 1.2rem;
+}
+
+/* ─── BOTÃO ───────────────────────────────────────────────────── */
+.pw-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: .9rem 1.5rem;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .25s, transform .2s var(--ease-spring), box-shadow .25s;
+  box-shadow: 0 4px 20px rgba(212,149,106,.3);
+}
+
+.pw-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(212,149,106,.45);
+}
+
+.pw-btn:active:not(:disabled) { transform: translateY(0); }
+
+.pw-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── ORNAMENTO ───────────────────────────────────────────────── */
+.login-ornament {
+  margin-top: 1.8rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-family: var(--font-hand);
+}
+
+.login-ornament::before,
+.login-ornament::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── OVERLAY DE SUCESSO ──────────────────────────────────────── */
+.success-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease;
+}
+
+.success-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.success-overlay .success-icon {
+  font-size: 4rem;
+  animation: popIn .6s var(--ease-spring);
+}
+
+.success-overlay .success-text {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  color: var(--green-light);
+  font-style: italic;
+}
+
+.success-overlay .success-sub {
+  font-family: var(--font-hand);
+  font-size: 1.1rem;
+  color: var(--text-sec);
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0) rotate(-30deg); }
+  70%  { transform: scale(1.3) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* ─── RESPONSIVE ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2.2rem 1.4rem 2rem;
+    border-radius: 20px;
+  }
+
+  .login-title { font-size: 1.6rem; }
+  .login-icon  { font-size: 2.4rem; }
+}

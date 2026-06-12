@@ -838,19 +838,55 @@ body::before {
 }
 
 .mural-notes-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   margin-top: 20px;
 }
 
 .mural-empty {
-  grid-column: 1 / -1;
   text-align: center;
   font-family: var(--font-hand);
   font-size: 1.1rem;
   color: var(--text-muted);
   padding: 20px 0;
+}
+
+/* ── Separador de dia ─────────────────────────────────────── */
+.mural-day-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 16px;
+}
+
+.mural-day-separator:first-child { margin-top: 4px; }
+
+.mural-day-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-light), transparent);
+}
+
+.mural-day-label {
+  font-family: var(--font-hand);
+  font-size: .95rem;
+  color: var(--accent-light);
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  padding: .3rem .9rem;
+  white-space: nowrap;
+  letter-spacing: .02em;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  text-transform: capitalize;
+}
+
+/* ── Grid de bilhetinhos dentro de cada dia ───────────────── */
+.mural-day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
 
 .mural-note {
@@ -873,13 +909,8 @@ body::before {
   border-color: var(--border-light);
 }
 
-.mural-note:nth-child(even) {
-  transform: rotate(-1.5deg);
-}
-
-.mural-note:nth-child(odd) {
-  transform: rotate(1deg);
-}
+.mural-note:nth-child(even) { transform: rotate(-1.5deg); }
+.mural-note:nth-child(odd)  { transform: rotate(1deg); }
 
 .mural-note-text {
   font-family: var(--font-serif);
@@ -906,11 +937,17 @@ body::before {
   font-weight: 600;
 }
 
-.mural-note-date {
+.mural-note-time {
   font-family: var(--font-hand);
-  font-size: .8rem;
+  font-size: .82rem;
   color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .1rem .45rem;
+  letter-spacing: .02em;
 }
+
 
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
@@ -986,7 +1023,8 @@ body::before {
   .closing-section { padding: 56px 12px 20px; }
   .mural-card { padding: 18px 16px; }
   .mural-submit-btn { width: 100%; text-align: center; }
-  .mural-notes-container { grid-template-columns: 1fr; }
+  .mural-day-grid { grid-template-columns: 1fr; }
+
 }
 
 @media (hover: none) {

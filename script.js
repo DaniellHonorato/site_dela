@@ -826,12 +826,34 @@ async function initMural() {
   const container = $('mural-notes');
   if (!form || !container || !supabaseClient) return;
 
+  /* Formata a chave do dia no formato YYYY-MM-DD no fuso local */
+  function dayKey(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  /* Label humanizado do separador de dia */
+  function dayLabel(dateObj) {
+    const today     = new Date();
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+
+    if (dayKey(dateObj) === dayKey(today)) return '📅 Hoje';
+    if (dayKey(dateObj) === dayKey(yesterday)) return '🕰️ Ontem';
+
+    return dateObj.toLocaleDateString('pt-BR', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+  }
+
   async function loadMessages() {
     try {
+      /* Busca em ordem cronológica crescente para facilitar o agrupamento */
       const { data, error } = await supabaseClient
         .from('messages')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -840,33 +862,64 @@ async function initMural() {
         return;
       }
 
-      container.innerHTML = data.map(msg => {
-        const date = new Date(msg.created_at).toLocaleDateString('pt-BR', {
-          day: '2-digit',
-          month: 'short',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        const senderEscaped = escapeHTML(msg.sender);
-        const contentEscaped = escapeHTML(msg.content);
+      /* Agrupa por dia (chave YYYY-MM-DD) preservando ordem cronológica interna */
+      const groups = new Map();
+      data.forEach(msg => {
+        const d   = new Date(msg.created_at);
+        const key = dayKey(d);
+        if (!groups.has(key)) groups.set(key, { date: d, messages: [] });
+        groups.get(key).messages.push(msg);
+      });
 
-        return `
-          <div class="mural-note reveal">
+      /* Inverte a ordem dos grupos para mostrar o dia mais recente primeiro */
+      const sortedKeys = [...groups.keys()].reverse();
+
+      /* Renderiza grupos + bilhetinhos */
+      container.innerHTML = '';
+
+      sortedKeys.forEach(key => {
+        const group = groups.get(key);
+
+        /* ── Separador de dia ── */
+        const sep = document.createElement('div');
+        sep.className = 'mural-day-separator reveal';
+        sep.innerHTML = `
+          <span class="mural-day-line"></span>
+          <span class="mural-day-label">${escapeHTML(dayLabel(group.date))}</span>
+          <span class="mural-day-line"></span>
+        `;
+        container.appendChild(sep);
+
+        /* ── Grid de bilhetinhos do dia ── */
+        const grid = document.createElement('div');
+        grid.className = 'mural-day-grid';
+        container.appendChild(grid);
+
+        group.messages.forEach(msg => {
+          const d = new Date(msg.created_at);
+          const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const senderEscaped  = escapeHTML(msg.sender);
+          const contentEscaped = escapeHTML(msg.content);
+
+          const note = document.createElement('div');
+          note.className = 'mural-note reveal';
+          note.innerHTML = `
             <p class="mural-note-text">"${contentEscaped}"</p>
             <div class="mural-note-footer">
               <span class="mural-note-sender">♡ de ${senderEscaped}</span>
-              <span class="mural-note-date">${date}</span>
+              <span class="mural-note-time">${timeStr}</span>
             </div>
-          </div>
-        `;
-      }).join('');
+          `;
+          grid.appendChild(note);
+        });
+      });
 
-      // Trigger scroll reveal for new notes
-      const els = container.querySelectorAll('.mural-note');
+      /* IntersectionObserver para animação de entrada */
+      const revealEls = container.querySelectorAll('.reveal');
       const io = new IntersectionObserver((entries) => {
         entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
-      }, { threshold: 0.1 });
-      els.forEach(el => io.observe(el));
+      }, { threshold: 0.08 });
+      revealEls.forEach(el => io.observe(el));
 
     } catch (err) {
       console.error('Erro ao carregar mensagens:', err);

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Para Você — A Nossa História</title>
+  <meta name="description" content="Um presente especial e único, feito com todo amor do mundo." />
+  <meta property="og:title" content="Para Você — A Nossa História" />
+  <meta property="og:description" content="Um presente especial e único, feito com todo amor do mundo." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="fotos/IMG_20251231_201946_162.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lato:wght@300;400;700&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     TELA DE SENHA
+     ═══════════════════════════════════════════════ -->
+<div id="password-screen" role="dialog" aria-modal="true" aria-label="Acesso ao site">
+  <canvas id="pw-petals" aria-hidden="true"></canvas>
+  <div class="password-box">
+    <span class="password-icon" aria-hidden="true">🌸</span>
+    <p class="password-eyebrow">✦ acesso especial ✦</p>
+    <h2 class="password-title">Só pra você entrar,<br/><em>meu amor</em></h2>
+    <p class="password-hint">Pensa bem... que frase resume tudo que sinto por você?</p>
+    <div class="password-input-wrap">
+      <input type="password" id="password-input" class="password-input"
+        placeholder="Digite a senha com carinho..." autocomplete="off" aria-label="Senha de acesso" />
+      <button class="password-toggle" id="password-toggle" type="button" aria-label="Mostrar senha">👁️</button>
+    </div>
+    <p class="password-error-msg" id="password-error" aria-live="polite"></p>
+    <button class="password-btn" id="password-submit" type="button">Entrar ♡</button>
+    <p class="password-attempts" id="password-attempts"></p>
+  </div>
+</div>
+
+<!-- Pétalas e toasts globais -->
+<canvas id="petals-canvas" aria-hidden="true"></canvas>
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada">
+  <div class="lightbox-content">
+    <button class="lightbox-close" id="lightbox-close" aria-label="Fechar">✕</button>
+    <div class="lightbox-inner-img" id="lightbox-img"></div>
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SITE PRINCIPAL
+     ═══════════════════════════════════════════════ -->
+<div class="site-wrapper">
+
+  <!-- ▓▓▓ 1. HERO ▓▓▓ -->
+  <section class="hero-section reveal">
+    <div class="hero-inner">
+      <span class="hero-eyebrow">✦ um presente feito só pra você ✦</span>
+      <h1 class="hero-title">Para a Minha<br/><em>Pessoa Favorita</em></h1>
+      <p class="hero-subtitle">Cada detalhe aqui foi pensado com carinho, porque você merece o mundo — e mais um pouquinho.</p>
+      <a href="#contador" class="hero-scroll-btn" aria-label="Rolar para o conteúdo">
+        <span>Começar</span>
+        <span class="scroll-arrow">↓</span>
+      </a>
+    </div>
+    <div class="hero-hearts" aria-hidden="true">
+      <span style="top:12%;left:7%;animation-delay:0s;font-size:1.4rem">♡</span>
+      <span style="top:25%;right:5%;animation-delay:1.5s;font-size:1rem">❤</span>
+      <span style="top:65%;left:3%;animation-delay:0.8s;font-size:1.2rem">♡</span>
+      <span style="top:78%;right:8%;animation-delay:2.2s;font-size:0.9rem">✿</span>
+      <span style="top:45%;left:2%;animation-delay:3s;font-size:1.1rem">❀</span>
+      <span style="top:55%;right:3%;animation-delay:1s;font-size:1rem">♡</span>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ 2. CONTADOR ▓▓▓ -->
+  <section id="contador" class="page-section reveal">
+    <div class="section-label">nossa contagem</div>
+    <div class="counter-mega">
+      <div class="counter-mega-ring" aria-hidden="true"></div>
+      <div class="counter-mega-inner">
+        <p class="counter-sub">Já se passaram</p>
+        <span class="counter-num" id="days-count">0</span>
+        <span class="counter-unit-text">dias juntos</span>
+        <p class="counter-date">desde <strong>05 de dezembro de 2025</strong> 🤍</p>
+      </div>
+    </div>
+    <!-- Palmeiras inline -->
+    <div class="palm-strip reveal reveal-delay-2">
+      <span class="palm-strip-icon">💚</span>
+      <p class="palm-strip-text">"Bate por duas coisas: você e o Palmeiras."</p>
+      <span class="palm-strip-badge">Verdão 💪</span>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ 3. MENSAGEM DIÁRIA ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">a mensagem de hoje</div>
+    <div class="book-card">
+      <div class="book-ruled-lines" aria-hidden="true"></div>
+      <div class="book-header">
+        <p class="book-chapter">Cap. 1 · Começando a Melhor Leitura</p>
+        <span class="book-date-stamp" id="book-date"></span>
+      </div>
+      <h2 class="book-title" id="book-title-text">A Nossa História</h2>
+      <span class="book-day-badge" id="book-day-badge">📖 Hoje</span>
+      <p class="book-message" id="daily-message"></p>
+
+      <div class="book-footer">
+        <div class="book-progress-wrap">
+          <div class="book-progress-bar">
+            <div class="book-progress-fill" id="book-progress-fill"></div>
+          </div>
+          <span class="book-progress-pct" id="book-progress-pct">0%</span>
+        </div>
+        <div class="book-nav">
+          <button class="book-nav-btn" id="book-prev" aria-label="Anterior">← Anterior</button>
+          <span class="book-nav-counter" id="book-nav-counter"></span>
+          <button class="book-nav-btn" id="book-next" aria-label="Próxima">Próxima →</button>
+        </div>
+        <div class="book-lock-msg" id="book-lock-msg">
+          🔒 As próximas mensagens ainda não chegaram. Volte amanhã!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ 4. CARROSSEL DE FOTOS ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">nossas memórias</div>
+    <h2 class="section-title">Nossa Galeria</h2>
+
+    <!-- Carrossel principal -->
+    <div class="carousel-root">
+      <div class="carousel-track-wrap">
+        <div class="carousel-track" id="carousel-track"></div>
+      </div>
+      <button class="carousel-arrow carousel-arrow-prev" id="carousel-prev" aria-label="Foto anterior">‹</button>
+      <button class="carousel-arrow carousel-arrow-next" id="carousel-next" aria-label="Próxima foto">›</button>
+      <div class="carousel-dots" id="carousel-dots"></div>
+      <p class="carousel-caption-text" id="carousel-caption"></p>
+    </div>
+
+    <!-- Thumbnails -->
+    <div class="thumb-strip" id="thumb-strip"></div>
+  </section>
+
+  <!-- ▓▓▓ 5. LINHA DO TEMPO ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">nossa trajetória</div>
+    <h2 class="section-title">Momentos que Guardo</h2>
+    <div class="timeline-v2" id="timeline-container"></div>
+  </section>
+
+  <!-- ▓▓▓ 6. COUNTDOWN ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">contagem regressiva</div>
+    <h2 class="section-title">Próximos Momentos</h2>
+    <div class="countdown-list" id="countdown-list"></div>
+  </section>
+
+  <!-- ▓▓▓ 7. ESTRELA ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">sua estrela no céu</div>
+    <h2 class="section-title">Sua Estrela</h2>
+    <div class="star-card">
+      <canvas id="star-canvas" aria-label="Céu estrelado animado com estrela personalizada"></canvas>
+      <div class="star-card-label">
+        <p class="star-card-title">Batizei uma estrela com o seu nome.</p>
+        <p class="star-card-sub">Olha ela brilhar — igual você. ✨</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ 8. RAZÕES PRA TE AMAR ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">razões pra te amar</div>
+    <h2 class="section-title">Por Que Te Amo</h2>
+    <div class="reasons-card">
+      <div class="reasons-header-row">
+        <p class="reasons-subtitle">Cada razão é real. Cada uma é sua.</p>
+        <span class="reasons-badge" id="reasons-counter">0 de 20</span>
+      </div>
+      <div id="love-reasons-list" aria-live="polite"></div>
+      <div class="reasons-actions">
+        <button class="reveal-btn" id="reveal-reason-btn">♡ Revelar mais uma razão</button>
+        <button class="reveal-btn secondary" id="reveal-all-btn">Ver todas de uma vez</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ 9. DOCERIA ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">nossa doceria</div>
+    <h2 class="section-title">Doceria do Amor 🍭</h2>
+    <p class="section-intro">Clique para resgatar seus mimos especiais</p>
+    <div class="treats-grid">
+      <button class="treat-btn" id="btn-treat-1"><span class="treat-icon">🍫</span><span>Palha italiana feita pelo seu namorado</span></button>
+      <button class="treat-btn" id="btn-treat-2"><span class="treat-icon">🤗</span><span>Abraço surpresa hoje</span></button>
+      <button class="treat-btn" id="btn-treat-3"><span class="treat-icon">💋</span><span>Beijo aleatório</span></button>
+      <button class="treat-btn" id="btn-treat-4"><span class="treat-icon">🎬</span><span>Escolher o próximo programa</span></button>
+      <button class="treat-btn flee-btn" id="flee-btn"><span class="treat-icon">💔</span><span>Quero te amar menos</span></button>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ 10. MURAL DE RECADOS (SUPABASE) ▓▓▓ -->
+  <section class="page-section reveal">
+    <div class="section-label">mural de amor</div>
+    <h2 class="section-title">Deixe um Recadinho ✍️</h2>
+    <p class="section-intro">Escreva algo fofo para mim ou leia os bilhetes que já nos deixamos</p>
+    
+    <div class="mural-card">
+      <form id="mural-form" class="mural-form">
+        <div class="mural-input-row">
+          <input type="text" id="mural-sender" placeholder="Seu nome..." required autocomplete="off" />
+        </div>
+        <div class="mural-input-row">
+          <textarea id="mural-content" placeholder="Escreva seu bilhetinho com todo carinho..." required rows="3"></textarea>
+        </div>
+        <button type="submit" class="mural-submit-btn">♡ Deixar Recado</button>
+      </form>
+
+      <div class="mural-notes-container" id="mural-notes">
+        <p class="mural-empty">Nenhum bilhetinho ainda. Seja o primeiro a escrever! 🌸</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ ENCERRAMENTO ▓▓▓ -->
+  <section class="closing-section reveal">
+    <h2>Você é a melhor parte<br/>de cada dia.</h2>
+    <p>Obrigado por ser tão você. Por cada risada, cada olhar, cada momento. Este site é pequenininho perto do que sinto, mas é todo feito de amor.</p>
+    <span class="closing-signature">Com todo meu amor ♡</span>
+  </section>
+
+  <footer class="site-footer">
+    <p>Feito com <span class="heart">♥</span> especialmente para você — <span id="footer-year"></span></p>
+  </footer>
+
+</div><!-- /site-wrapper -->
+
+<button class="scroll-top-btn" id="scroll-top-btn" aria-label="Voltar ao topo">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+</body>
+</html>

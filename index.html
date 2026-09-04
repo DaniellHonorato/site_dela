@@ -195,6 +195,61 @@
     </div>
   </section>
 
+  <!-- ▓▓▓ JOGO 1 — CARTAS EMBARALHADAS ▓▓▓ -->
+  <section id="jogo-cartas" class="page-section reveal">
+    <div class="section-label">jogo do amor · 1</div>
+    <h2 class="section-title">Cartas Embaralhadas 💌</h2>
+    <p class="section-intro">Monte a frase do dia na ordem certa</p>
+    <div class="game-card" id="cartas-game">
+      <p class="game-day-badge" id="cartas-day"></p>
+      <div class="cartas-slots" id="cartas-slots" aria-label="Espaços para montar a frase"></div>
+      <p class="cartas-divider" aria-hidden="true">↑ monte aqui ↑</p>
+      <div class="cartas-bank" id="cartas-bank" aria-label="Palavras disponíveis"></div>
+      <div class="cartas-actions">
+        <button class="game-btn secondary" id="cartas-reset" type="button">🔀 Embaralhar</button>
+        <button class="game-btn primary"   id="cartas-check" type="button" disabled>✓ Verificar</button>
+      </div>
+      <p class="cartas-result" id="cartas-result" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ JOGO 2 — CAÇA-PALAVRAS ▓▓▓ -->
+  <section id="jogo-cacapalavras" class="page-section reveal">
+    <div class="section-label">jogo do amor · 2</div>
+    <h2 class="section-title">Caça-Palavras Diário 🔠</h2>
+    <p class="section-intro">Palavras do nosso mundo — nova grade todo dia</p>
+    <div class="game-card">
+      <div class="caca-layout">
+        <div class="caca-grid-wrap">
+          <div class="caca-grid" id="caca-grid" role="grid" aria-label="Grade do caça-palavras"></div>
+        </div>
+        <div class="caca-sidebar">
+          <p class="caca-list-title">Encontre:</p>
+          <ul class="caca-word-list" id="caca-word-list" aria-label="Lista de palavras"></ul>
+        </div>
+      </div>
+      <div class="caca-complete" id="caca-complete" hidden>✨ Todas as palavras encontradas! Você é incrível! ✨</div>
+    </div>
+  </section>
+
+  <!-- ▓▓▓ JOGO 3 — MEMÓRIA ▓▓▓ -->
+  <section id="jogo-memoria" class="page-section reveal">
+    <div class="section-label">jogo do amor · 3</div>
+    <h2 class="section-title">Memória dos Momentos 🃏</h2>
+    <p class="section-intro">Encontre os pares das nossas fotos juntos</p>
+    <div class="game-card">
+      <div class="memoria-header">
+        <span class="memoria-stat"        id="memoria-tentativas">0 tentativas</span>
+        <span class="memoria-stat accent" id="memoria-pares">0 / 8 pares</span>
+      </div>
+      <div class="memoria-grid" id="memoria-grid" role="list" aria-label="Grade do jogo da memória"></div>
+      <div class="memoria-win" id="memoria-win" hidden>
+        <p>🎉 Você encontrou todos os pares!</p>
+        <button class="game-btn primary" id="memoria-restart" type="button">Jogar de novo 🔄</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ▓▓▓ 10. MURAL DE RECADOS (SUPABASE) ▓▓▓ -->
   <section class="page-section reveal">
     <div class="section-label">mural de amor</div>
@@ -209,11 +264,26 @@
         <div class="mural-input-row">
           <textarea id="mural-content" placeholder="Escreva seu bilhetinho com todo carinho..." required rows="3"></textarea>
         </div>
+        <div class="mural-input-row">
+          <label class="mural-color-label">Cor do bilhete:</label>
+          <div class="mural-color-picker" id="mural-color-picker" role="radiogroup" aria-label="Cor do bilhete">
+            <button type="button" class="color-swatch active" data-color="default" aria-label="Dourado (padrão)" style="--swatch-color:#d4956a"></button>
+            <button type="button" class="color-swatch" data-color="rosa"    aria-label="Rosa"    style="--swatch-color:#c47b8a"></button>
+            <button type="button" class="color-swatch" data-color="amarelo" aria-label="Amarelo" style="--swatch-color:#c9a630"></button>
+            <button type="button" class="color-swatch" data-color="verde"   aria-label="Verde"   style="--swatch-color:#5a9e78"></button>
+            <button type="button" class="color-swatch" data-color="lilas"   aria-label="Lilás"   style="--swatch-color:#8b7ec8"></button>
+          </div>
+        </div>
         <button type="submit" class="mural-submit-btn">♡ Deixar Recado</button>
       </form>
 
+      <div class="mural-tabs" id="mural-tabs">
+        <button class="mural-tab active" data-tab="todos"     type="button">💌 Todos</button>
+        <button class="mural-tab"        data-tab="favoritos" type="button">⭐ Favoritos</button>
+      </div>
+
       <div class="mural-notes-container" id="mural-notes">
-        <p class="mural-empty">Nenhum bilhetinho ainda. Seja o primeiro a escrever! 🌸</p>
+        <p class="mural-empty" id="mural-placeholder">Carregando recadinhos com carinho... 💌</p>
       </div>
     </div>
   </section>

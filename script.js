@@ -814,153 +814,691 @@ function initDoceria() {
   }, { passive: true });
 }
 
-/* ─── MURAL DE RECADOS (SUPABASE) ──────────────────────────────── */
+/* ─── JOGO: CARTAS EMBARALHADAS ────────────────────────────── */
+function initJogoCartas() {
+  const slotsEl  = $('cartas-slots');
+  const bankEl   = $('cartas-bank');
+  const checkBtn = $('cartas-check');
+  const resetBtn = $('cartas-reset');
+  const resultEl = $('cartas-result');
+  const dayEl    = $('cartas-day');
+  if (!slotsEl || !bankEl) return;
+
+  const PHRASES = [
+    'você é a melhor parte de cada dia',
+    'te amar é a coisa mais natural que já fiz',
+    'o universo conspirou pra nos juntar',
+    'seu sorriso para o tempo inteiro',
+    'meu coração só bate por você',
+    'você é minha pessoa favorita',
+    'toda risada boa é com você',
+    'você coloriu minha vida de amor',
+    'sinto sua falta antes de você ir',
+    'escolho você todos os dias',
+  ];
+
+  const today   = new Date();
+  const dayIdx  = daysBetween(CONFIG.startDate, today) % PHRASES.length;
+  const phrase  = PHRASES[dayIdx];
+  const words   = phrase.split(' ');
+  if (dayEl) dayEl.textContent = `Frase ${dayIdx + 1} de ${PHRASES.length}`;
+
+  const doneKey = `cartas_done_${today.toISOString().slice(0, 10)}`;
+
+  function shuffleArr(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  let slots    = [];
+  let bankPool = [];
+
+  function renderSlots() {
+    slotsEl.innerHTML = '';
+    slots.forEach((w, i) => {
+      const btn = document.createElement('button');
+      btn.type      = 'button';
+      btn.className = 'cartas-slot ' + (w ? 'filled' : 'empty');
+      btn.textContent = w || '···';
+      btn.disabled    = !w;
+      if (w) {
+        btn.addEventListener('click', () => {
+          bankPool.push(w);
+          slots[i] = null;
+          render();
+        });
+      }
+      slotsEl.appendChild(btn);
+    });
+  }
+
+  function renderBank() {
+    bankEl.innerHTML = '';
+    bankPool.forEach((w, i) => {
+      const btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.className   = 'cartas-chip';
+      btn.textContent = w;
+      btn.addEventListener('click', () => {
+        const empty = slots.indexOf(null);
+        if (empty === -1) return;
+        slots[empty] = w;
+        bankPool.splice(i, 1);
+        render();
+      });
+      bankEl.appendChild(btn);
+    });
+  }
+
+  function render() {
+    renderSlots();
+    renderBank();
+    checkBtn.disabled = slots.some(s => s === null);
+  }
+
+  function init() {
+    slots    = new Array(words.length).fill(null);
+    bankPool = shuffleArr(words);
+    render();
+    resultEl.textContent = '';
+    resultEl.className   = 'cartas-result';
+  }
+
+  function launchConfetti() {
+    const cvs = document.createElement('canvas');
+    cvs.style.cssText   = 'position:fixed;inset:0;pointer-events:none;z-index:99999;';
+    cvs.width  = window.innerWidth;
+    cvs.height = window.innerHeight;
+    document.body.appendChild(cvs);
+    const ctx    = cvs.getContext('2d');
+    const COLORS = ['#d4956a','#5a9e78','#f2d7d5','#b8e0cc','#f0c040','#ffffff'];
+    const parts  = Array.from({ length: 90 }, () => ({
+      x: Math.random() * cvs.width, y: -16 - Math.random() * 40,
+      vx: (Math.random() - .5) * 5, vy: Math.random() * 3 + 2,
+      size: Math.random() * 8 + 4, rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - .5) * .15,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    }));
+    let frame = 0;
+    (function draw() {
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      const alpha = Math.max(0, 1 - frame / 100);
+      parts.forEach(p => {
+        p.x += p.vx; p.y += p.vy + frame * .015; p.rot += p.rotV;
+        ctx.save();
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle   = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .6);
+        ctx.restore();
+      });
+      frame++;
+      if (frame < 130) requestAnimationFrame(draw); else cvs.remove();
+    })();
+  }
+
+  function checkAnswer() {
+    const correct = slots.every((w, i) => w === words[i]);
+    if (correct) {
+      resultEl.textContent = '🎉 Perfeito! Você montou a frase com amor! 💕';
+      resultEl.className   = 'cartas-result correct';
+      localStorage.setItem(doneKey, '1');
+      launchConfetti();
+    } else {
+      resultEl.textContent = '💌 Quase! Reveja a ordem das palavras…';
+      resultEl.className   = 'cartas-result incorrect';
+      slots.forEach((w, i) => {
+        if (w !== words[i]) {
+          const el = slotsEl.children[i];
+          if (!el) return;
+          el.classList.add('shake');
+          setTimeout(() => el.classList.remove('shake'), 500);
+        }
+      });
+    }
+  }
+
+  if (localStorage.getItem(doneKey) === '1') {
+    slots = [...words]; bankPool = [];
+    render();
+    resultEl.textContent = '🎉 Você já completou a frase de hoje! 💕';
+    resultEl.className   = 'cartas-result correct';
+  } else {
+    init();
+  }
+
+  checkBtn.addEventListener('click', checkAnswer);
+  resetBtn.addEventListener('click', init);
+}
+
+/* ─── JOGO: CAÇA-PALAVRAS ─────────────────────────────────── */
+function initCacaPalavras() {
+  const gridEl     = $('caca-grid');
+  const wordListEl = $('caca-word-list');
+  const completeEl = $('caca-complete');
+  if (!gridEl || !wordListEl) return;
+
+  const WORDS = [
+    'FORMIGUINHA', 'PALMEIRAS', 'POBRINHA', 'LEGO',
+    'AMOR', 'TEAMO', 'JUNTOS', 'ESTRELA', 'NAMORADO', 'SAUDADE',
+  ];
+  const WORD_LABEL = { TEAMO: 'TE AMO' };
+  const DIRS   = [[0,1],[1,0],[1,1],[0,-1],[-1,0],[-1,-1],[1,-1],[-1,1]];
+  const ALPHA  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const SIZE   = 12;
+
+  /* Seeded xorshift RNG */
+  function mkRNG(seed) {
+    let s = (seed ^ 0xDEADBEEF) >>> 0;
+    return () => { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return (s >>> 0) / 0x100000000; };
+  }
+  const today = new Date();
+  const rng   = mkRNG(today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate());
+
+  /* Build grid */
+  const grid   = Array.from({ length: SIZE }, () => Array(SIZE).fill(''));
+  const placed = [];
+
+  function placeWord(word) {
+    for (let a = 0; a < 500; a++) {
+      const [dr, dc] = DIRS[Math.floor(rng() * DIRS.length)];
+      const r0 = Math.floor(rng() * SIZE);
+      const c0 = Math.floor(rng() * SIZE);
+      let ok = true;
+      const cells = [];
+      for (let k = 0; k < word.length; k++) {
+        const r = r0 + dr * k, c = c0 + dc * k;
+        if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) { ok = false; break; }
+        if (grid[r][c] && grid[r][c] !== word[k]) { ok = false; break; }
+        cells.push({ r, c });
+      }
+      if (ok) {
+        cells.forEach(({ r, c }, k) => { grid[r][c] = word[k]; });
+        placed.push({ word, cells });
+        return;
+      }
+    }
+  }
+
+  [...WORDS].sort((a, b) => b.length - a.length).forEach(placeWord);
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (!grid[r][c]) grid[r][c] = ALPHA[Math.floor(rng() * ALPHA.length)];
+
+  /* State */
+  const storageKey = `caca_${today.toISOString().slice(0, 10)}`;
+  const found = new Set(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+  let first   = null;
+  const dom   = [];
+
+  /* Render grid */
+  gridEl.style.gridTemplateColumns = `repeat(${SIZE}, 1fr)`;
+  for (let r = 0; r < SIZE; r++) {
+    dom[r] = [];
+    for (let c = 0; c < SIZE; c++) {
+      const btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.className   = 'caca-cell';
+      btn.textContent = grid[r][c];
+      btn.setAttribute('aria-label', grid[r][c]);
+      btn.addEventListener('click', () => onCellClick(r, c));
+      gridEl.appendChild(btn);
+      dom[r][c] = btn;
+    }
+  }
+
+  /* Mark already-found cells */
+  placed.forEach(({ word, cells }) => {
+    if (found.has(word)) cells.forEach(({ r, c }) => dom[r][c].classList.add('found'));
+  });
+
+  /* Word list */
+  function renderList() {
+    wordListEl.innerHTML = '';
+    placed.forEach(({ word }) => {
+      const li = document.createElement('li');
+      li.className    = 'caca-word-item' + (found.has(word) ? ' found' : '');
+      li.dataset.word = word;
+      li.textContent  = WORD_LABEL[word] || word;
+      wordListEl.appendChild(li);
+    });
+  }
+  renderList();
+
+  function getLine(a, b) {
+    const dr = b.r - a.r, dc = b.c - a.c;
+    if (dr === 0 && dc === 0) return [a];
+    if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return [];
+    const len = Math.max(Math.abs(dr), Math.abs(dc));
+    const sr  = dr ? dr / Math.abs(dr) : 0;
+    const sc  = dc ? dc / Math.abs(dc) : 0;
+    return Array.from({ length: len + 1 }, (_, k) => ({ r: a.r + sr * k, c: a.c + sc * k }));
+  }
+
+  function onCellClick(r, c) {
+    if (!first) {
+      first = { r, c };
+      dom[r][c].classList.add('selecting');
+      return;
+    }
+    if (first.r === r && first.c === c) {
+      dom[r][c].classList.remove('selecting');
+      first = null;
+      return;
+    }
+    const line = getLine(first, { r, c });
+    dom[first.r][first.c].classList.remove('selecting');
+    first = null;
+    if (!line.length) return;
+
+    const word  = line.map(p => grid[p.r][p.c]).join('');
+    const wordR = word.split('').reverse().join('');
+    const match = placed.find(p => !found.has(p.word) && (p.word === word || p.word === wordR));
+
+    if (match) {
+      found.add(match.word);
+      localStorage.setItem(storageKey, JSON.stringify([...found]));
+      match.cells.forEach(({ r: mr, c: mc }) => dom[mr][mc].classList.add('found'));
+      wordListEl.querySelector(`[data-word="${match.word}"]`)?.classList.add('found');
+      showToast(`✨ "${WORD_LABEL[match.word] || match.word}" encontrada!`);
+      if (found.size === placed.length && completeEl) {
+        setTimeout(() => { completeEl.hidden = false; }, 500);
+      }
+    } else {
+      line.forEach(({ r: lr, c: lc }) => dom[lr][lc].classList.add('selecting'));
+      setTimeout(() => line.forEach(({ r: lr, c: lc }) => dom[lr][lc].classList.remove('selecting')), 380);
+    }
+  }
+
+  if (found.size === placed.length && placed.length && completeEl) completeEl.hidden = false;
+}
+
+/* ─── JOGO: MEMÓRIA DOS MOMENTOS ──────────────────────────── */
+function initJogoMemoria() {
+  const gridEl       = $('memoria-grid');
+  const tentativasEl = $('memoria-tentativas');
+  const paresEl      = $('memoria-pares');
+  const winEl        = $('memoria-win');
+  const restartBtn   = $('memoria-restart');
+  if (!gridEl) return;
+
+  let flipped    = [];
+  let matchedSet = new Set();
+  let tentativas = 0;
+  let locked     = false;
+  let deck       = [];
+
+  function shuffleArr(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function updateStats() {
+    if (tentativasEl) tentativasEl.textContent = `${tentativas} tentativa${tentativas !== 1 ? 's' : ''}`;
+    if (paresEl)      paresEl.textContent      = `${matchedSet.size / 2} / ${CONFIG.photos.length} pares`;
+  }
+
+  function createCard(cardData) {
+    const el = document.createElement('div');
+    el.className = 'memoria-card';
+    el.setAttribute('role', 'listitem');
+    el.setAttribute('aria-label', 'Carta');
+    el.innerHTML = `
+      <div class="memoria-front" aria-hidden="true">♡</div>
+      <div class="memoria-back"><img src="${cardData.src}" alt="Foto" loading="lazy"></div>
+    `;
+    el.addEventListener('click', () => onCardClick(el, cardData));
+    return el;
+  }
+
+  function onCardClick(el, cardData) {
+    if (locked) return;
+    if (matchedSet.has(cardData.uid)) return;
+    if (flipped.some(f => f.uid === cardData.uid)) return;
+
+    el.classList.add('flipped');
+    el.setAttribute('aria-label', cardData.place || 'Foto revelada');
+    flipped.push({ el, ...cardData });
+
+    if (flipped.length === 2) {
+      tentativas++;
+      updateStats();
+      locked = true;
+      const [a, b] = flipped;
+      if (a.src === b.src) {
+        matchedSet.add(a.uid);
+        matchedSet.add(b.uid);
+        a.el.classList.add('matched');
+        b.el.classList.add('matched');
+        flipped = [];
+        locked  = false;
+        updateStats();
+        if (matchedSet.size === deck.length) {
+          setTimeout(() => { if (winEl) winEl.hidden = false; }, 700);
+        }
+      } else {
+        setTimeout(() => {
+          a.el.classList.remove('flipped');
+          b.el.classList.remove('flipped');
+          a.el.setAttribute('aria-label', 'Carta');
+          b.el.setAttribute('aria-label', 'Carta');
+          flipped = [];
+          locked  = false;
+        }, 1100);
+      }
+    }
+  }
+
+  function init() {
+    const pairs = CONFIG.photos.flatMap(p => [p, p]);
+    deck        = shuffleArr(pairs).map((p, i) => ({ ...p, uid: i }));
+    flipped     = [];
+    matchedSet  = new Set();
+    tentativas  = 0;
+    locked      = false;
+    gridEl.innerHTML = '';
+    deck.forEach(card => gridEl.appendChild(createCard(card)));
+    updateStats();
+    if (winEl) winEl.hidden = true;
+  }
+
+  if (restartBtn) restartBtn.addEventListener('click', init);
+  init();
+}
+
+/* ─── MURAL DE RECADOS (SUPABASE) ──────────────────────────── */
 const SUPABASE_URL = 'https://ejxinajgfmdupirmuonj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqeGluYWpnZm1kdXBpcm11b25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTk0NTIsImV4cCI6MjA5Njc5NTQ1Mn0.WoYZ8B46TfBoYmSh1ApqhhG8SUgdexj72OoSw1K5Zvg';
 
 let supabaseClient = null;
-if (typeof supabase !== 'undefined') {
-  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+  const sb = (typeof supabase !== 'undefined' ? supabase : (typeof window !== 'undefined' ? window.supabase : null));
+  if (sb && typeof sb.createClient === 'function') {
+    supabaseClient = sb.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return supabaseClient;
 }
 
 async function initMural() {
-  const form = $('mural-form');
+  const form      = $('mural-form');
   const container = $('mural-notes');
-  if (!form || !container || !supabaseClient) return;
+  if (!form || !container) return;
 
-  /* Formata a chave do dia no formato YYYY-MM-DD no fuso local */
-  function dayKey(dateObj) {
-    const y = dateObj.getFullYear();
-    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  const client = getSupabaseClient();
+  if (!client) {
+    console.error('Supabase library not loaded yet');
+    container.innerHTML = `<p class="mural-empty" style="color:var(--accent)">⚠️ O mural precisa de conexão para carregar os recados. Recarregue a página em alguns instantes. 🌸</p>`;
+    return;
   }
 
-  /* Label humanizado do separador de dia */
-  function dayLabel(dateObj) {
-    const today     = new Date();
-    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  /* Session ID anônimo por aba para registrar reações */
+  function getSessionId() {
+    let id = sessionStorage.getItem('_sid');
+    if (!id) {
+      id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem('_sid', id);
+    }
+    return id;
+  }
 
-    if (dayKey(dateObj) === dayKey(today)) return '📅 Hoje';
-    if (dayKey(dateObj) === dayKey(yesterday)) return '🕰️ Ontem';
-
-    return dateObj.toLocaleDateString('pt-BR', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  /* ── Color picker ───────────────────────────────── */
+  let selectedColor = 'default';
+  const colorPicker = $('mural-color-picker');
+  if (colorPicker) {
+    colorPicker.addEventListener('click', e => {
+      const sw = e.target.closest('.color-swatch');
+      if (!sw) return;
+      colorPicker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      selectedColor = sw.dataset.color || 'default';
     });
   }
 
+  /* ── Favoritos (localStorage) ───────────────────── */
+  const FAV_KEY = 'fav_notes_v1';
+  const getFavs = () => new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+  const setFavs = set => localStorage.setItem(FAV_KEY, JSON.stringify([...set]));
+
+  /* ── Tabs ───────────────────────────────────────── */
+  let activeTab = 'todos';
+  document.querySelectorAll('.mural-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.mural-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeTab = tab.dataset.tab;
+      applyTabFilter();
+    });
+  });
+
+  function applyTabFilter() {
+    const favs = getFavs();
+    let totalVisible = 0;
+
+    container.querySelectorAll('.mural-note').forEach(note => {
+      const isVisible = activeTab === 'todos' || favs.has(note.dataset.id);
+      note.hidden = !isVisible;
+      if (isVisible) totalVisible++;
+    });
+
+    container.querySelectorAll('.mural-day-grid').forEach(grid => {
+      const hasVisible = [...grid.querySelectorAll('.mural-note')].some(n => !n.hidden);
+      const sep = grid.previousElementSibling;
+      if (sep && sep.classList.contains('mural-day-separator')) {
+        sep.hidden = !hasVisible;
+      }
+      grid.hidden = !hasVisible;
+    });
+
+    let favEmptyEl = $('mural-fav-empty');
+    if (activeTab === 'favoritos' && totalVisible === 0) {
+      if (!favEmptyEl) {
+        favEmptyEl = document.createElement('p');
+        favEmptyEl.id = 'mural-fav-empty';
+        favEmptyEl.className = 'mural-empty';
+        favEmptyEl.textContent = 'Você ainda não favoritou nenhum bilhete. Clique na estrelinha ☆ de qualquer recado para guardá-lo aqui! ⭐';
+        container.appendChild(favEmptyEl);
+      }
+      favEmptyEl.hidden = false;
+    } else if (favEmptyEl) {
+      favEmptyEl.hidden = true;
+    }
+  }
+
+  /* ── Helpers ────────────────────────────────────── */
+  function dayKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function dayLabel(d) {
+    const today = new Date(), yest = new Date(today); yest.setDate(today.getDate()-1);
+    if (dayKey(d) === dayKey(today)) return '📅 Hoje';
+    if (dayKey(d) === dayKey(yest))  return '🕰️ Ontem';
+    return d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+  function escapeHTML(s) {
+    if (typeof s !== 'string') s = String(s ?? '');
+    return s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
+  }
+
+  /* ── Reações ────────────────────────────────────── */
+  const EMOJIS   = ['💕','😂','😍','🥺'];
+  const reacted  = (id, e) => sessionStorage.getItem(`r_${id}_${e}`) === '1';
+  const setReact = (id, e) => sessionStorage.setItem(`r_${id}_${e}`, '1');
+
+  async function loadAllReactions() {
+    try {
+      const { data } = await client.from('reactions').select('message_id, emoji');
+      const map = {};
+      (data || []).forEach(r => {
+        const mid = String(r.message_id);
+        if (!map[mid]) map[mid] = {};
+        map[mid][r.emoji] = (map[mid][r.emoji] || 0) + 1;
+      });
+      return map;
+    } catch {
+      return {};
+    }
+  }
+
+  async function doReact(msgId, emoji, countEl, btn) {
+    if (reacted(msgId, emoji)) {
+      showToast('💕 Já reagiu assim!');
+      return;
+    }
+    setReact(msgId, emoji);
+    btn.classList.add('reacted');
+    countEl.textContent = (parseInt(countEl.textContent, 10) || 0) + 1;
+
+    try {
+      await client.from('reactions').insert({
+        message_id: String(msgId),
+        emoji,
+        session_id: getSessionId(),
+      });
+    } catch (err) {
+      console.warn('Reação salva apenas localmente:', err);
+    }
+  }
+
+  /* ── Montar bilhetinho ──────────────────────────── */
+  function buildNote(msg, initialReactions = {}) {
+    const d        = new Date(msg.created_at);
+    const timeStr  = d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    const color    = msg.color || 'default';
+    const isFav    = getFavs().has(String(msg.id));
+
+    const note = document.createElement('div');
+    note.className  = `mural-note mural-note--${color}`;
+    note.dataset.id = String(msg.id);
+    note.innerHTML  = `
+      <button class="fav-btn${isFav ? ' active' : ''}" type="button" aria-label="Favoritar bilhete">
+        ${isFav ? '★' : '☆'}
+      </button>
+      <p class="mural-note-text">"${escapeHTML(msg.content)}"</p>
+      <div class="mural-note-footer">
+        <span class="mural-note-sender">♡ de ${escapeHTML(msg.sender)}</span>
+        <span class="mural-note-time">${timeStr}</span>
+      </div>
+      <div class="mural-reactions" aria-label="Reações">
+        ${EMOJIS.map(e => `
+          <button class="reaction-btn${reacted(msg.id, e) ? ' reacted' : ''}"
+                  type="button" data-emoji="${e}" aria-label="Reagir com ${e}">
+            ${e}<span class="reaction-count">${initialReactions[e] || 0}</span>
+          </button>
+        `).join('')}
+      </div>
+    `;
+
+    /* Favorito toggle */
+    const favBtn = note.querySelector('.fav-btn');
+    favBtn.addEventListener('click', () => {
+      const f  = getFavs();
+      const id = String(msg.id);
+      if (f.has(id)) {
+        f.delete(id);
+        favBtn.classList.remove('active');
+        favBtn.textContent = '☆';
+      } else {
+        f.add(id);
+        favBtn.classList.add('active');
+        favBtn.textContent = '★';
+      }
+      setFavs(f);
+      applyTabFilter();
+    });
+
+    /* Reações */
+    note.querySelectorAll('.reaction-btn').forEach(btn => {
+      btn.addEventListener('click', () =>
+        doReact(msg.id, btn.dataset.emoji, btn.querySelector('.reaction-count'), btn));
+    });
+
+    return note;
+  }
+
+  /* ── Carregar mensagens ─────────────────────────── */
   async function loadMessages() {
     try {
-      /* Busca em ordem cronológica crescente para facilitar o agrupamento */
-      const { data, error } = await supabaseClient
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: true });
+      const [messagesRes, reactionMap] = await Promise.all([
+        client.from('messages').select('*').order('created_at', { ascending: true }),
+        loadAllReactions()
+      ]);
 
-      if (error) throw error;
+      if (messagesRes.error) throw messagesRes.error;
+      const data = messagesRes.data;
 
       if (!data || data.length === 0) {
         container.innerHTML = `<p class="mural-empty">Nenhum bilhetinho ainda. Seja o primeiro a escrever! 🌸</p>`;
         return;
       }
 
-      /* Agrupa por dia (chave YYYY-MM-DD) preservando ordem cronológica interna */
       const groups = new Map();
       data.forEach(msg => {
-        const d   = new Date(msg.created_at);
-        const key = dayKey(d);
-        if (!groups.has(key)) groups.set(key, { date: d, messages: [] });
-        groups.get(key).messages.push(msg);
+        const k = dayKey(new Date(msg.created_at));
+        if (!groups.has(k)) groups.set(k, { date: new Date(msg.created_at), messages: [] });
+        groups.get(k).messages.push(msg);
       });
 
-      /* Inverte a ordem dos grupos para mostrar o dia mais recente primeiro */
-      const sortedKeys = [...groups.keys()].reverse();
-
-      /* Renderiza grupos + bilhetinhos */
       container.innerHTML = '';
-
-      sortedKeys.forEach(key => {
-        const group = groups.get(key);
-
-        /* ── Separador de dia ── */
+      [...groups.keys()].reverse().forEach(k => {
+        const { date, messages: msgs } = groups.get(k);
         const sep = document.createElement('div');
-        sep.className = 'mural-day-separator reveal';
+        sep.className = 'mural-day-separator';
         sep.innerHTML = `
           <span class="mural-day-line"></span>
-          <span class="mural-day-label">${escapeHTML(dayLabel(group.date))}</span>
+          <span class="mural-day-label">${escapeHTML(dayLabel(date))}</span>
           <span class="mural-day-line"></span>
         `;
         container.appendChild(sep);
 
-        /* ── Grid de bilhetinhos do dia ── */
         const grid = document.createElement('div');
         grid.className = 'mural-day-grid';
-        container.appendChild(grid);
-
-        group.messages.forEach(msg => {
-          const d = new Date(msg.created_at);
-          const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-          const senderEscaped  = escapeHTML(msg.sender);
-          const contentEscaped = escapeHTML(msg.content);
-
-          const note = document.createElement('div');
-          note.className = 'mural-note reveal';
-          note.innerHTML = `
-            <p class="mural-note-text">"${contentEscaped}"</p>
-            <div class="mural-note-footer">
-              <span class="mural-note-sender">♡ de ${senderEscaped}</span>
-              <span class="mural-note-time">${timeStr}</span>
-            </div>
-          `;
-          grid.appendChild(note);
+        msgs.forEach(msg => {
+          const reactions = reactionMap[String(msg.id)] || {};
+          grid.appendChild(buildNote(msg, reactions));
         });
+        container.appendChild(grid);
       });
 
-      /* IntersectionObserver para animação de entrada */
-      const revealEls = container.querySelectorAll('.reveal');
-      const io = new IntersectionObserver((entries) => {
-        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
-      }, { threshold: 0.08 });
-      revealEls.forEach(el => io.observe(el));
-
+      applyTabFilter();
     } catch (err) {
-      console.error('Erro ao carregar mensagens:', err);
-      container.innerHTML = `<p class="mural-empty" style="color: var(--accent);">⚠️ Não foi possível carregar as mensagens. Tente novamente mais tarde.</p>`;
+      console.error('Erro ao carregar mensagens do mural:', err);
+      container.innerHTML = `<p class="mural-empty" style="color:var(--accent)">⚠️ Não foi possível carregar os bilhetes agora. Verifique sua conexão e recarregue a página.</p>`;
     }
   }
 
-  function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-      tag => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        "'": '&#39;',
-        '"': '&quot;'
-      }[tag] || tag)
-    );
-  }
-
-  form.addEventListener('submit', async (e) => {
+  /* ── Enviar bilhete ─────────────────────────────── */
+  form.addEventListener('submit', async e => {
     e.preventDefault();
-    const senderInput = $('mural-sender');
+    const senderInput  = $('mural-sender');
     const contentInput = $('mural-content');
-    const submitBtn = form.querySelector('.mural-submit-btn');
-
-    const sender = senderInput.value.trim();
+    const submitBtn    = form.querySelector('.mural-submit-btn');
+    const sender  = senderInput.value.trim();
     const content = contentInput.value.trim();
-
     if (!sender || !content) return;
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Enviando...';
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Enviando…';
 
     try {
-      const { error } = await supabaseClient
+      let insertRes = await client
         .from('messages')
-        .insert([{ sender, content }]);
+        .insert([{ sender, content, color: selectedColor }]);
 
-      if (error) throw error;
+      // Fallback gracioso caso a coluna color ainda não tenha sido criada no Supabase
+      if (insertRes.error && insertRes.error.message && insertRes.error.message.includes('color')) {
+        insertRes = await client.from('messages').insert([{ sender, content }]);
+      }
+
+      if (insertRes.error) throw insertRes.error;
 
       showToast('💌 Bilhetinho colado no mural!');
       contentInput.value = '';
@@ -969,7 +1507,7 @@ async function initMural() {
       console.error('Erro ao enviar mensagem:', err);
       showToast('❌ Erro ao enviar bilhete. Tente de novo.');
     } finally {
-      submitBtn.disabled = false;
+      submitBtn.disabled    = false;
       submitBtn.textContent = '♡ Deixar Recado';
     }
   });
@@ -1006,6 +1544,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initStarCanvas();
   initLoveReasons();
   initDoceria();
+  initJogoCartas();
+  initCacaPalavras();
+  initJogoMemoria();
   initScrollTop();
   initFooter();
   initMural();

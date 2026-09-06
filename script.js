@@ -100,6 +100,11 @@ const CONFIG = {
 /* ─── UTILITÁRIOS ─────────────────────────────────────────────── */
 function $(id) { return document.getElementById(id); }
 
+function escapeHTML(s) {
+  if (typeof s !== 'string') s = String(s ?? '');
+  return s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
+}
+
 function daysBetween(a, b) {
   const ms = b - a;
   return Math.max(0, Math.floor(ms / 86400000));
@@ -1454,6 +1459,9 @@ async function initMural() {
 
   /* ── 8. Renderização em Lote com DocumentFragment (Zero Travamento) ── */
   function renderMessageGroups(data, reactionMap) {
+    const placeholder = $('mural-placeholder');
+    if (placeholder) placeholder.hidden = true;
+
     if (!data || data.length === 0) {
       container.innerHTML = `<p class="mural-empty">Nenhum bilhetinho ainda. Seja o primeiro a escrever! 🌸</p>`;
       return;

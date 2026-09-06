@@ -515,10 +515,10 @@ function initCountdowns() {
       const now  = new Date();
       const diff = targetDate - now;
       if (diff <= 0) {
-        card.querySelector('[data-unit="d"]').textContent = '0';
-        card.querySelector('[data-unit="h"]').textContent = '0';
-        card.querySelector('[data-unit="m"]').textContent = '0';
-        card.querySelector('[data-unit="s"]').textContent = '0';
+        card.querySelector('[data-unit="d"]').textContent = '00';
+        card.querySelector('[data-unit="h"]').textContent = '00';
+        card.querySelector('[data-unit="m"]').textContent = '00';
+        card.querySelector('[data-unit="s"]').textContent = '00';
         return;
       }
       card.querySelector('[data-unit="d"]').textContent = pad2(Math.floor(diff / 86400000));
@@ -544,8 +544,8 @@ function initStarCanvas() {
   const ctx = canvas.getContext('2d');
 
   function resize() {
-    canvas.width  = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    canvas.width  = canvas.offsetWidth || 300;
+    canvas.height = canvas.offsetHeight || 200;
   }
   resize();
   const ro = new ResizeObserver(resize);
@@ -1144,7 +1144,7 @@ function initJogoMemoria() {
     el.setAttribute('aria-label', 'Carta');
     el.innerHTML = `
       <div class="memoria-front" aria-hidden="true">♡</div>
-      <div class="memoria-back"><img src="${cardData.src}" alt="Foto" loading="lazy"></div>
+      <div class="memoria-back"><img src="${cardData.src}" alt="${escapeHTML(cardData.place || 'Foto')}" loading="lazy"></div>
     `;
     el.addEventListener('click', () => onCardClick(el, cardData));
     return el;

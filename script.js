@@ -113,6 +113,7 @@ function formatDate(d) {
 
 function showToast(msg, duration = 3500) {
   const container = $('toast-container');
+  if (!container) return;
   const el = document.createElement('div');
   el.className = 'toast';
   el.textContent = msg;
@@ -126,13 +127,27 @@ function showToast(msg, duration = 3500) {
   }, duration);
 }
 
-/* ─── REVEAL AO SCROLL ────────────────────────────────────────── */
+/* ─── REVEAL AO SCROLL (COM FALLBACK DE SEGURANÇA) ────────────── */
 function initReveal() {
   const els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) {
+    els.forEach(el => el.classList.add('visible'));
+    return;
+  }
   const io = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
-  }, { threshold: 0.1 });
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0, rootMargin: '100px 0px' });
   els.forEach(el => io.observe(el));
+
+  /* Fallback: garante que nenhum elemento fique invisível por falha do observer */
+  setTimeout(() => {
+    document.querySelectorAll('.reveal:not(.visible)').forEach(el => el.classList.add('visible'));
+  }, 1200);
 }
 
 /* ─── PÉTALAS ─────────────────────────────────────────────────── */
@@ -177,74 +192,32 @@ function initPetals(canvasId, isFullPage = true) {
       ctx.fill();
       ctx.restore();
     });
-    requestAnimationFrame(draw);
+    /* FIX: salva ID para permitir cancelamento via Page Visibility API */
+    rafId = requestAnimationFrame(draw);
   }
-  draw();
+
+  /* FIX: pausa loop quando aba fica oculta — poupa CPU e bateria no mobile */
+  let rafId = requestAnimationFrame(draw);
+  if (isFullPage) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        cancelAnimationFrame(rafId);
+      } else {
+        rafId = requestAnimationFrame(draw);
+      }
+    });
+  }
 }
 
 /* ─── TELA DE SENHA ───────────────────────────────────────────── */
+/* NOTA: O sistema de login foi migrado para login.html com CSS e JS
+   próprios. O guard de autenticação está no <script> inline no topo
+   do index.html (verifica sessionStorage). Esta função foi mantida
+   como stub para evitar erros caso seja chamada, mas não faz nada
+   pois o elemento #password-screen não existe mais no index.html. */
 function initPassword() {
-  const screen  = $('password-screen');
-  const input   = $('password-input');
-  const submit  = $('password-submit');
-  const toggle  = $('password-toggle');
-  const errorEl = $('password-error');
-  const attEl   = $('password-attempts');
-
-  if (!screen) return;
-
-  /* Sessão já autenticada */
-  if (sessionStorage.getItem('auth_ok') === '1') {
-    screen.classList.add('hidden');
-    return;
-  }
-
-  initPetals('pw-petals', false);
-
-  let attempts = 0;
-  const MAX = 5;
-
-  toggle.addEventListener('click', () => {
-    input.type = input.type === 'password' ? 'text' : 'password';
-    toggle.textContent = input.type === 'password' ? '👁️' : '🙈';
-  });
-
-  function attempt() {
-    const val = input.value.trim().toLowerCase();
-    if (!val) return;
-    if (val === CONFIG.password) {
-      sessionStorage.setItem('auth_ok', '1');
-      errorEl.textContent = '✓ Bem-vinda, meu amor! 🌸';
-      errorEl.style.color = 'var(--forest)';
-      submit.disabled = true;
-      setTimeout(() => screen.classList.add('hidden'), 900);
-    } else {
-      attempts++;
-      input.classList.add('error');
-      setTimeout(() => input.classList.remove('error'), 500);
-      const remaining = MAX - attempts;
-      if (remaining <= 0) {
-        errorEl.textContent = '💔 Pensa com calma... você sabe!';
-        attEl.textContent = 'Tente novamente em alguns instantes.';
-        submit.disabled = true;
-        input.disabled  = true;
-        setTimeout(() => {
-          submit.disabled = false;
-          input.disabled  = false;
-          attempts = 0;
-          errorEl.textContent = '';
-          attEl.textContent   = '';
-        }, 10000);
-      } else {
-        errorEl.textContent = '❌ Não é bem isso... pensa mais!';
-        attEl.textContent = `${remaining} tentativa${remaining === 1 ? '' : 's'} restante${remaining === 1 ? '' : 's'}`;
-      }
-    }
-    input.value = '';
-  }
-
-  submit.addEventListener('click', attempt);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+  /* Sem elementos de senha nesta página — login está em login.html */
+  if (!$('password-screen')) return;
 }
 
 /* ─── CONTADOR DE DIAS ────────────────────────────────────────── */
@@ -301,6 +274,8 @@ function initDailyMessage() {
       titleEl.textContent = msg.title;
       dateEl.textContent  = formatDate(date);
 
+      /* FIX: sempre atualiza o badge e reseta o background inline para
+         evitar que o estilo da iteração anterior vaze para a próxima */
       if (idx === todayIdx) {
         dayBadge.textContent = '📖 Mensagem de Hoje';
         dayBadge.style.background = 'var(--mint-light)';
@@ -308,6 +283,11 @@ function initDailyMessage() {
         const daysAgo = todayIdx - idx;
         dayBadge.textContent = `⏮ Há ${daysAgo} dia${daysAgo > 1 ? 's' : ''}`;
         dayBadge.style.background = 'var(--blush)';
+      } else {
+        /* idx > todayIdx não deveria ocorrer (botão é bloqueado), mas
+           reset defensivo para evitar estado visual incorreto */
+        dayBadge.textContent = '🔒 Em breve';
+        dayBadge.style.background = '';
       }
 
       counterEl.textContent = `Dia ${idx + 1} de ${total}`;
@@ -707,9 +687,20 @@ function initStarCanvas() {
     ctx.fillText(CONFIG.starName, cx, cy + 38 + 3 * Math.sin(nameAnim * 2));
     ctx.globalAlpha = 1;
 
-    requestAnimationFrame(drawFrame);
+    /* FIX: salva o ID do frame para poder cancelar quando necessário */
+    starRafId = requestAnimationFrame(drawFrame);
   }
-  requestAnimationFrame(drawFrame);
+
+  /* FIX: pausa animação quando a aba fica invisível (economiza CPU/bateria)
+     e retoma quando o usuário volta — usa Page Visibility API */
+  let starRafId = requestAnimationFrame(drawFrame);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      cancelAnimationFrame(starRafId);
+    } else {
+      starRafId = requestAnimationFrame(drawFrame);
+    }
+  });
 }
 
 /* ─── RAZÕES ──────────────────────────────────────────────────── */
@@ -1181,6 +1172,9 @@ function initJogoMemoria() {
         flipped = [];
         locked  = false;
         updateStats();
+        /* matchedSet guarda UIDs individuais de cada carta (2 por par),
+           deck.length = CONFIG.photos.length * 2 (também individual),
+           portanto a comparação é correta: todas as cartas foram pareadas */
         if (matchedSet.size === deck.length) {
           setTimeout(() => { if (winEl) winEl.hidden = false; }, 700);
         }
@@ -1214,33 +1208,85 @@ function initJogoMemoria() {
   init();
 }
 
-/* ─── MURAL DE RECADOS (SUPABASE) ──────────────────────────── */
+/* ─── MURAL DE RECADOS (CLIENTE REST NATIVO & ALTA PERFORMANCE) ─── */
 const SUPABASE_URL = 'https://ejxinajgfmdupirmuonj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqeGluYWpnZm1kdXBpcm11b25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTk0NTIsImV4cCI6MjA5Njc5NTQ1Mn0.WoYZ8B46TfBoYmSh1ApqhhG8SUgdexj72OoSw1K5Zvg';
 
-let supabaseClient = null;
-function getSupabaseClient() {
-  if (supabaseClient) return supabaseClient;
-  const sb = (typeof supabase !== 'undefined' ? supabase : (typeof window !== 'undefined' ? window.supabase : null));
-  if (sb && typeof sb.createClient === 'function') {
-    supabaseClient = sb.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* Cliente REST nativo PostgREST: 0 KB de bibliotecas externas, zero latência de CDN */
+const MuralAPI = {
+  url: `${SUPABASE_URL}/rest/v1`,
+  headers: {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json'
+  },
+
+  async fetchWithTimeout(resource, options = {}, timeoutMs = 6000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal,
+        headers: { ...this.headers, ...(options.headers || {}) }
+      });
+      return response;
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+
+  async getMessages(limit = 60) {
+    const res = await this.fetchWithTimeout(`${this.url}/messages?select=*&order=created_at.desc&limit=${limit}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  },
+
+  async getReactions() {
+    const res = await this.fetchWithTimeout(`${this.url}/reactions?select=message_id,emoji`, {}, 5000);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  },
+
+  async insertMessage(msg) {
+    const res = await this.fetchWithTimeout(`${this.url}/messages`, {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(msg)
+    }, 7000);
+    
+    if (!res.ok) {
+      /* Fallback caso a coluna color não esteja criada no banco */
+      if (msg.color) {
+        const { color, ...withoutColor } = msg;
+        return this.insertMessage(withoutColor);
+      }
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data[0] : data;
+  },
+
+  async insertReaction(reaction) {
+    try {
+      await this.fetchWithTimeout(`${this.url}/reactions`, {
+        method: 'POST',
+        body: JSON.stringify(reaction)
+      }, 5000);
+      return true;
+    } catch (e) {
+      console.warn('Reação salva offline:', e);
+      return false;
+    }
   }
-  return supabaseClient;
-}
+};
 
 async function initMural() {
   const form      = $('mural-form');
   const container = $('mural-notes');
   if (!form || !container) return;
 
-  const client = getSupabaseClient();
-  if (!client) {
-    console.error('Supabase library not loaded yet');
-    container.innerHTML = `<p class="mural-empty" style="color:var(--accent)">⚠️ O mural precisa de conexão para carregar os recados. Recarregue a página em alguns instantes. 🌸</p>`;
-    return;
-  }
-
-  /* Session ID anônimo por aba para registrar reações */
+  /* ── 1. Session ID anônimo por aba para registrar reações ── */
   function getSessionId() {
     let id = sessionStorage.getItem('_sid');
     if (!id) {
@@ -1250,7 +1296,7 @@ async function initMural() {
     return id;
   }
 
-  /* ── Color picker ───────────────────────────────── */
+  /* ── 2. Seleção de cor do bilhete ── */
   let selectedColor = 'default';
   const colorPicker = $('mural-color-picker');
   if (colorPicker) {
@@ -1263,12 +1309,12 @@ async function initMural() {
     });
   }
 
-  /* ── Favoritos (localStorage) ───────────────────── */
+  /* ── 3. Favoritos (localStorage) ── */
   const FAV_KEY = 'fav_notes_v1';
   const getFavs = () => new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
   const setFavs = set => localStorage.setItem(FAV_KEY, JSON.stringify([...set]));
 
-  /* ── Tabs ───────────────────────────────────────── */
+  /* ── 4. Abas (Todos / Favoritos) ── */
   let activeTab = 'todos';
   document.querySelectorAll('.mural-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -1313,7 +1359,7 @@ async function initMural() {
     }
   }
 
-  /* ── Helpers ────────────────────────────────────── */
+  /* ── 5. Helpers de Data e Formatação ── */
   function dayKey(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
@@ -1328,27 +1374,12 @@ async function initMural() {
     return s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
   }
 
-  /* ── Reações ────────────────────────────────────── */
+  /* ── 6. Reações com Feedback Imediato ── */
   const EMOJIS   = ['💕','😂','😍','🥺'];
   const reacted  = (id, e) => sessionStorage.getItem(`r_${id}_${e}`) === '1';
   const setReact = (id, e) => sessionStorage.setItem(`r_${id}_${e}`, '1');
 
-  async function loadAllReactions() {
-    try {
-      const { data } = await client.from('reactions').select('message_id, emoji');
-      const map = {};
-      (data || []).forEach(r => {
-        const mid = String(r.message_id);
-        if (!map[mid]) map[mid] = {};
-        map[mid][r.emoji] = (map[mid][r.emoji] || 0) + 1;
-      });
-      return map;
-    } catch {
-      return {};
-    }
-  }
-
-  async function doReact(msgId, emoji, countEl, btn) {
+  function handleReaction(msgId, emoji, countEl, btn) {
     if (reacted(msgId, emoji)) {
       showToast('💕 Já reagiu assim!');
       return;
@@ -1357,21 +1388,18 @@ async function initMural() {
     btn.classList.add('reacted');
     countEl.textContent = (parseInt(countEl.textContent, 10) || 0) + 1;
 
-    try {
-      await client.from('reactions').insert({
-        message_id: String(msgId),
-        emoji,
-        session_id: getSessionId(),
-      });
-    } catch (err) {
-      console.warn('Reação salva apenas localmente:', err);
-    }
+    /* Envia para o Supabase em segundo plano sem travar a interface */
+    MuralAPI.insertReaction({
+      message_id: String(msgId),
+      emoji,
+      session_id: getSessionId()
+    });
   }
 
-  /* ── Montar bilhetinho ──────────────────────────── */
+  /* ── 7. Montagem do card do Bilhete ── */
   function buildNote(msg, initialReactions = {}) {
-    const d        = new Date(msg.created_at);
-    const timeStr  = d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    const d        = new Date(msg.created_at || Date.now());
+    const timeStr  = isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     const color    = msg.color || 'default';
     const isFav    = getFavs().has(String(msg.id));
 
@@ -1397,7 +1425,7 @@ async function initMural() {
       </div>
     `;
 
-    /* Favorito toggle */
+    /* Toggle de Favorito */
     const favBtn = note.querySelector('.fav-btn');
     favBtn.addEventListener('click', () => {
       const f  = getFavs();
@@ -1415,67 +1443,101 @@ async function initMural() {
       applyTabFilter();
     });
 
-    /* Reações */
+    /* Clique nas Reações */
     note.querySelectorAll('.reaction-btn').forEach(btn => {
       btn.addEventListener('click', () =>
-        doReact(msg.id, btn.dataset.emoji, btn.querySelector('.reaction-count'), btn));
+        handleReaction(msg.id, btn.dataset.emoji, btn.querySelector('.reaction-count'), btn));
     });
 
     return note;
   }
 
-  /* ── Carregar mensagens ─────────────────────────── */
+  /* ── 8. Renderização em Lote com DocumentFragment (Zero Travamento) ── */
+  function renderMessageGroups(data, reactionMap) {
+    if (!data || data.length === 0) {
+      container.innerHTML = `<p class="mural-empty">Nenhum bilhetinho ainda. Seja o primeiro a escrever! 🌸</p>`;
+      return;
+    }
+
+    const groups = new Map();
+    const sortedData = [...data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    sortedData.forEach(msg => {
+      const d = new Date(msg.created_at || Date.now());
+      const k = dayKey(isNaN(d.getTime()) ? new Date() : d);
+      if (!groups.has(k)) groups.set(k, { date: isNaN(d.getTime()) ? new Date() : d, messages: [] });
+      groups.get(k).messages.push(msg);
+    });
+
+    const fragment = document.createDocumentFragment();
+
+    [...groups.keys()].reverse().forEach(k => {
+      const { date, messages: msgs } = groups.get(k);
+      const sep = document.createElement('div');
+      sep.className = 'mural-day-separator';
+      sep.innerHTML = `
+        <span class="mural-day-line"></span>
+        <span class="mural-day-label">${escapeHTML(dayLabel(date))}</span>
+        <span class="mural-day-line"></span>
+      `;
+      fragment.appendChild(sep);
+
+      const grid = document.createElement('div');
+      grid.className = 'mural-day-grid';
+      msgs.forEach(msg => {
+        const reactions = reactionMap[String(msg.id)] || {};
+        grid.appendChild(buildNote(msg, reactions));
+      });
+      fragment.appendChild(grid);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
+    applyTabFilter();
+  }
+
+  /* ── 9. Carregamento de Mensagens (Cache Instantâneo + Sync Remoto) ── */
   async function loadMessages() {
+    /* Exibe do cache local imediatamente se existir (0ms) */
+    const cachedMsgs = localStorage.getItem('mural_cache_msgs');
+    const cachedReactions = localStorage.getItem('mural_cache_reactions');
+    if (cachedMsgs) {
+      try {
+        renderMessageGroups(JSON.parse(cachedMsgs), cachedReactions ? JSON.parse(cachedReactions) : {});
+      } catch (e) {
+        console.warn('Erro ao ler cache de recados:', e);
+      }
+    }
+
+    /* Busca dados frescos do Supabase sem travar o usuário */
     try {
-      const [messagesRes, reactionMap] = await Promise.all([
-        client.from('messages').select('*').order('created_at', { ascending: true }),
-        loadAllReactions()
+      const [messages, reactions] = await Promise.all([
+        MuralAPI.getMessages(60),
+        MuralAPI.getReactions().catch(() => [])
       ]);
 
-      if (messagesRes.error) throw messagesRes.error;
-      const data = messagesRes.data;
-
-      if (!data || data.length === 0) {
-        container.innerHTML = `<p class="mural-empty">Nenhum bilhetinho ainda. Seja o primeiro a escrever! 🌸</p>`;
-        return;
-      }
-
-      const groups = new Map();
-      data.forEach(msg => {
-        const k = dayKey(new Date(msg.created_at));
-        if (!groups.has(k)) groups.set(k, { date: new Date(msg.created_at), messages: [] });
-        groups.get(k).messages.push(msg);
+      const reactionMap = {};
+      (reactions || []).forEach(r => {
+        const mid = String(r.message_id);
+        if (!reactionMap[mid]) reactionMap[mid] = {};
+        reactionMap[mid][r.emoji] = (reactionMap[mid][r.emoji] || 0) + 1;
       });
 
-      container.innerHTML = '';
-      [...groups.keys()].reverse().forEach(k => {
-        const { date, messages: msgs } = groups.get(k);
-        const sep = document.createElement('div');
-        sep.className = 'mural-day-separator';
-        sep.innerHTML = `
-          <span class="mural-day-line"></span>
-          <span class="mural-day-label">${escapeHTML(dayLabel(date))}</span>
-          <span class="mural-day-line"></span>
-        `;
-        container.appendChild(sep);
+      /* Atualiza cache local */
+      localStorage.setItem('mural_cache_msgs', JSON.stringify(messages));
+      localStorage.setItem('mural_cache_reactions', JSON.stringify(reactionMap));
 
-        const grid = document.createElement('div');
-        grid.className = 'mural-day-grid';
-        msgs.forEach(msg => {
-          const reactions = reactionMap[String(msg.id)] || {};
-          grid.appendChild(buildNote(msg, reactions));
-        });
-        container.appendChild(grid);
-      });
-
-      applyTabFilter();
+      /* Renderiza dados atualizados */
+      renderMessageGroups(messages, reactionMap);
     } catch (err) {
-      console.error('Erro ao carregar mensagens do mural:', err);
-      container.innerHTML = `<p class="mural-empty" style="color:var(--accent)">⚠️ Não foi possível carregar os bilhetes agora. Verifique sua conexão e recarregue a página.</p>`;
+      console.warn('Conexão remota indisponível, mantendo recados locais:', err);
+      if (!cachedMsgs) {
+        container.innerHTML = `<p class="mural-empty" style="color:var(--accent)">🌸 O mural está pronto! Seja o primeiro a deixar um recadinho abaixo.</p>`;
+      }
     }
   }
 
-  /* ── Enviar bilhete ─────────────────────────────── */
+  /* ── 10. Envio de Bilhete (Atualização Otimista & À Prova de Falhas) ── */
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const senderInput  = $('mural-sender');
@@ -1485,34 +1547,71 @@ async function initMural() {
     const content = contentInput.value.trim();
     if (!sender || !content) return;
 
-    submitBtn.disabled    = true;
-    submitBtn.textContent = 'Enviando…';
+    /* Criação do recado imediato (otimista) */
+    const tempId = 'temp_' + Date.now();
+    const optimisticMsg = {
+      id: tempId,
+      sender,
+      content,
+      color: selectedColor,
+      created_at: new Date().toISOString()
+    };
+
+    /* Renderiza na tela na mesma hora */
+    let currentMsgs = [];
+    try {
+      currentMsgs = JSON.parse(localStorage.getItem('mural_cache_msgs') || '[]');
+    } catch { currentMsgs = []; }
+
+    currentMsgs.unshift(optimisticMsg);
+    localStorage.setItem('mural_cache_msgs', JSON.stringify(currentMsgs));
+    
+    let currentReacts = {};
+    try {
+      currentReacts = JSON.parse(localStorage.getItem('mural_cache_reactions') || '{}');
+    } catch { currentReacts = {}; }
+
+    renderMessageGroups(currentMsgs, currentReacts);
+
+    /* Limpa os campos e dá feedback imediato */
+    contentInput.value = '';
+    showToast('💌 Bilhetinho colado no mural!');
+
+    /* Envio em segundo plano ao Supabase */
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando…';
+    }
 
     try {
-      let insertRes = await client
-        .from('messages')
-        .insert([{ sender, content, color: selectedColor }]);
+      const inserted = await MuralAPI.insertMessage({
+        sender,
+        content,
+        color: selectedColor
+      });
 
-      // Fallback gracioso caso a coluna color ainda não tenha sido criada no Supabase
-      if (insertRes.error && insertRes.error.message && insertRes.error.message.includes('color')) {
-        insertRes = await client.from('messages').insert([{ sender, content }]);
+      /* Atualiza o bilhete temporário com o ID real retornado pelo banco */
+      if (inserted && inserted.id) {
+        const idx = currentMsgs.findIndex(m => m.id === tempId);
+        if (idx !== -1) {
+          currentMsgs[idx] = inserted;
+          localStorage.setItem('mural_cache_msgs', JSON.stringify(currentMsgs));
+          const noteEl = container.querySelector(`[data-id="${tempId}"]`);
+          if (noteEl) noteEl.dataset.id = String(inserted.id);
+        }
       }
-
-      if (insertRes.error) throw insertRes.error;
-
-      showToast('💌 Bilhetinho colado no mural!');
-      contentInput.value = '';
-      await loadMessages();
     } catch (err) {
-      console.error('Erro ao enviar mensagem:', err);
-      showToast('❌ Erro ao enviar bilhete. Tente de novo.');
+      console.warn('Aviso: o bilhete foi salvo localmente, mas não pôde ser enviado ao banco remoto agora:', err);
     } finally {
-      submitBtn.disabled    = false;
-      submitBtn.textContent = '♡ Deixar Recado';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '♡ Deixar Recado';
+      }
     }
   });
 
-  await loadMessages();
+  /* Inicia o carregamento */
+  loadMessages();
 }
 
 /* ─── SCROLL TOP ──────────────────────────────────────────────── */
@@ -1533,6 +1632,7 @@ function initFooter() {
 
 /* ─── INIT ────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  /* initPassword() é no-op nesta página — guard de auth está inline no <head> */
   initPassword();
   initReveal();
   initPetals('petals-canvas', true);
@@ -1549,5 +1649,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initJogoMemoria();
   initScrollTop();
   initFooter();
-  initMural();
+  /* FIX: initMural é async — adiciona .catch() para evitar
+     UnhandledPromiseRejection se houver erro de rede/Supabase */
+  initMural().catch(err => console.error('Erro ao inicializar mural:', err));
 });
